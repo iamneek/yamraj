@@ -42,9 +42,9 @@ func main() {
 		})
 	})
 
+	fmt.Println("Server started on port :8000")
 	if err := http.ListenAndServe(":8000", r); err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println("Server started on port :8000")
 	}
+
 }

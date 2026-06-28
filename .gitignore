@@ -1,0 +1,14 @@
+*.exe
+*.out
+_testapi/tmp/
+
+.env
+*.env
+_testapi/.env
+
+*.test
+*.prof
+/vendor/
+
+.DS_Store
+Thumbs.db
