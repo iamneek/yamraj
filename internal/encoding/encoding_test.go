@@ -53,9 +53,10 @@ func TestDecode(t *testing.T) {
 			decoded, err := Decode(tc.encoded)
 			if !tc.wantErr {
 				require.NoError(t, err)
+				require.NotNil(t, decoded)
 			} else {
 				require.Error(t, err)
-				require.Empty(t, decoded)
+				require.Nil(t, decoded)
 			}
 		})
 	}
