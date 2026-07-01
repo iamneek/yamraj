@@ -71,19 +71,19 @@ func TestVerifyMalformedHash(t *testing.T) {
 }
 
 func TestNeedsRehash(t *testing.T) {
-    currentParams := DefaultParams()
-    hash, err := ArgonHash("password123", currentParams)
-    require.NoError(t, err)
+	currentParams := DefaultParams()
+	hash, err := ArgonHash("password123", currentParams)
+	require.NoError(t, err)
 
-    needsRehash, err := NeedRehash(hash, currentParams)
-    require.NoError(t, err)
-    require.False(t, needsRehash)
+	needsRehash, err := NeedRehash(hash, currentParams)
+	require.NoError(t, err)
+	require.False(t, needsRehash)
 
-    weakParams := Params{Memory: 16384, Time: 1, Parallelism: 2, SaltLength: 16, KeyLength: 32}
-    weakHash, err := ArgonHash("password123", weakParams)
-    require.NoError(t, err)
+	weakParams := Params{Memory: 16384, Time: 1, Parallelism: 2, SaltLength: 16, KeyLength: 32}
+	weakHash, err := ArgonHash("password123", weakParams)
+	require.NoError(t, err)
 
-    needsRehash2, err := NeedRehash(weakHash, currentParams)
-    require.NoError(t, err)
-    require.True(t, needsRehash2)
+	needsRehash2, err := NeedRehash(weakHash, currentParams)
+	require.NoError(t, err)
+	require.True(t, needsRehash2)
 }
