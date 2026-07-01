@@ -50,48 +50,49 @@ func ArgonHash(password string, params Params) (string, error) {
 	return encodedHash, nil
 }
 
-func VerifyHash(password string, encodedHash string) (status bool, err error) {
+func parseHash(encodedHash string) (Params, []byte, []byte, error) {
 	splits := strings.Split(encodedHash, "$")
-
 	if len(splits) != 6 {
-		return false, ErrHashInvalid
+		return Params{}, nil, nil, ErrHashInvalid
 	}
-
 	var hashVersion int
-	_, err = fmt.Sscanf(splits[2], "v=%d", &hashVersion)
-	if err != nil {
-		return false, ErrHashInvalid
+	if _, err := fmt.Sscanf(splits[2], "v=%d", &hashVersion); err != nil {
+		return Params{}, nil, nil, ErrHashInvalid
 	}
-
 	if hashVersion != cargon2.Version {
-		return false, ErrHashInvalid
+		return Params{}, nil, nil, ErrHashInvalid
 	}
-
-	var params Params
-	_, err = fmt.Sscanf(splits[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Time, &params.Parallelism)
-
+	var p Params
+	if _, err := fmt.Sscanf(splits[3], "m=%d,t=%d,p=%d", &p.Memory, &p.Time, &p.Parallelism); err != nil {
+		return Params{}, nil, nil, ErrHashInvalid
+	}
+	salt, err := encoding.Decode(splits[4])
 	if err != nil {
-		return false, ErrHashInvalid
+		return Params{}, nil, nil, ErrHashInvalid
 	}
-
-	saltDecoded, err := encoding.Decode(splits[4])
+	hash, err := encoding.Decode(splits[5])
 	if err != nil {
-		return false, ErrHashInvalid
+		return Params{}, nil, nil, ErrHashInvalid
 	}
-
-	hashDecoded, err := encoding.Decode(splits[5])
-	if err != nil {
-		return false, ErrHashInvalid
-	}
-	params.KeyLength = uint32(len(hashDecoded))
-	newPassHash := cargon2.IDKey([]byte(password), saltDecoded, params.Time, params.Memory, params.Parallelism, params.KeyLength)
-
-	if subtle.ConstantTimeCompare(hashDecoded, newPassHash) == 1 {
-		return true, nil
-	}
-	return false, nil
+	p.KeyLength = uint32(len(hash))
+	return p, salt, hash, nil
 }
 
-func NeedRehash(hash string, currentParams Params) (bool, error) {
-	return false, nil
+func VerifyHash(password string, encodedHash string) (bool, error) {
+	p, salt, hash, err := parseHash(encodedHash)
+	if err != nil {
+		return false, err
+	}
+	newHash := cargon2.IDKey([]byte(password), salt, p.Time, p.Memory, p.Parallelism, p.KeyLength)
+	return subtle.ConstantTimeCompare(hash, newHash) == 1, nil
+}
+
+func NeedsRehash(encodedHash string, currentParams Params) (bool, error) {
+	p, _, _, err := parseHash(encodedHash)
+	if err != nil {
+		return false, err
+	}
+	return p.Memory < currentParams.Memory || p.Time < currentParams.Time ||
+		p.Parallelism < currentParams.Parallelism ||
+		p.KeyLength < currentParams.KeyLength, nil
 }

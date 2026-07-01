@@ -75,7 +75,7 @@ func TestNeedsRehash(t *testing.T) {
 	hash, err := ArgonHash("password123", currentParams)
 	require.NoError(t, err)
 
-	needsRehash, err := NeedRehash(hash, currentParams)
+	needsRehash, err := NeedsRehash(hash, currentParams)
 	require.NoError(t, err)
 	require.False(t, needsRehash)
 
@@ -83,7 +83,7 @@ func TestNeedsRehash(t *testing.T) {
 	weakHash, err := ArgonHash("password123", weakParams)
 	require.NoError(t, err)
 
-	needsRehash2, err := NeedRehash(weakHash, currentParams)
+	needsRehash2, err := NeedsRehash(weakHash, currentParams)
 	require.NoError(t, err)
 	require.True(t, needsRehash2)
 }
