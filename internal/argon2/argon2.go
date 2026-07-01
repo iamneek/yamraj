@@ -1,8 +1,10 @@
 package argon2
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/iamneek/yamraj/internal/encoding"
 	"github.com/iamneek/yamraj/internal/randutil"
@@ -27,6 +29,8 @@ func DefaultParams() Params {
 	}
 }
 
+var ErrHashInvalid = errors.New("hash invalid")
+
 func ArgonHash(password string, params Params) (string, error) {
 	salt, saltErr := randutil.GenerateRandomBytes(int(params.SaltLength))
 	if saltErr != nil {
@@ -46,7 +50,45 @@ func ArgonHash(password string, params Params) (string, error) {
 	return encodedHash, nil
 }
 
-func VerifyHash(password string, encodedHash string) (bool, error) {
+func VerifyHash(password string, encodedHash string) (status bool, err error) {
+	splits := strings.Split(encodedHash, "$")
+
+	if len(splits) != 6 {
+		return false, ErrHashInvalid
+	}
+
+	var hashVersion int
+	_, err = fmt.Sscanf(splits[2], "v=%d", &hashVersion)
+	if err != nil {
+		return false, ErrHashInvalid
+	}
+
+	if hashVersion != cargon2.Version {
+		return false, ErrHashInvalid
+	}
+
+	var params Params
+	_, err = fmt.Sscanf(splits[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Time, &params.Parallelism)
+
+	if err != nil {
+		return false, ErrHashInvalid
+	}
+
+	saltDecoded, err := encoding.Decode(splits[4])
+	if err != nil {
+		return false, ErrHashInvalid
+	}
+
+	hashDecoded, err := encoding.Decode(splits[5])
+	if err != nil {
+		return false, ErrHashInvalid
+	}
+	params.KeyLength = uint32(len(hashDecoded))
+	newPassHash := cargon2.IDKey([]byte(password), saltDecoded, params.Time, params.Memory, params.Parallelism, params.KeyLength)
+
+	if subtle.ConstantTimeCompare(hashDecoded, newPassHash) == 1 {
+		return true, nil
+	}
 	return false, nil
 }
 
